@@ -1,5 +1,6 @@
 <%@ page import="java.sql.*" %>
 <%@ page import="java.util.*" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 
 <%
 if(session.getAttribute("login") == null)
@@ -11,6 +12,8 @@ if(session.getAttribute("login") == null)
 String watchMessage = "";
 List<Map<String, Object>> recommendations = new ArrayList<>();
 String watchedMovieGenre = "";
+String watchedMovieName = "";
+List<Map<String, Object>> allMovies = new ArrayList<>();
 
 Connection con = null;
 PreparedStatement ps = null;
@@ -35,23 +38,24 @@ try
 
     if(watchMovie != null && !watchMovie.trim().isEmpty())
     {
+        watchedMovieName = watchMovie.trim();
         String username = (String)session.getAttribute("username");
         
         ps = con.prepareStatement(
             "INSERT INTO watch_history(username, movie_name, watched_time) VALUES(?, ?, NOW())"
         );
         ps.setString(1, username != null ? username : "anonymous");
-        ps.setString(2, watchMovie.trim());
+        ps.setString(2, watchedMovieName);
         ps.executeUpdate();
         ps.close();
         
-        watchMessage = "You watched: " + watchMovie;
+        watchMessage = "You watched: " + watchedMovieName;
 
         // Get the genre of the watched movie
         ps = con.prepareStatement(
             "SELECT genre FROM movies WHERE movie_name=?"
         );
-        ps.setString(1, watchMovie.trim());
+        ps.setString(1, watchedMovieName);
         ResultSet r1 = ps.executeQuery();
 
         if(r1.next())
@@ -68,7 +72,7 @@ try
                 "SELECT * FROM movies WHERE genre=? AND movie_name<>? ORDER BY rating DESC"
             );
             ps.setString(1, watchedMovieGenre);
-            ps.setString(2, watchMovie.trim());
+            ps.setString(2, watchedMovieName);
             ResultSet r2 = ps.executeQuery();
 
             while(r2.next())
@@ -84,8 +88,21 @@ try
         }
     }
 
+    // Fetch all movies
     st = con.createStatement();
     rs = st.executeQuery("SELECT * FROM movies ORDER BY movie_name");
+    
+    // Store all movies in a list
+    while(rs.next())
+    {
+        Map<String, Object> movie = new HashMap<>();
+        movie.put("movie_name", rs.getString("movie_name"));
+        movie.put("genre", rs.getString("genre"));
+        movie.put("rating", rs.getDouble("rating"));
+        allMovies.add(movie);
+    }
+    rs.close();
+    st.close();
 %>
 
 <!DOCTYPE html>
@@ -229,6 +246,36 @@ margin-bottom:20px;
 font-weight:bold;
 font-size:18px;
 }
+
+/* Watched Movie Highlight */
+.watched-movie-section{
+background:rgba(255, 215, 0, 0.1);
+border:2px solid rgba(255, 215, 0, 0.3);
+border-radius:15px;
+padding:20px;
+margin-bottom:30px;
+}
+.watched-movie-section h2{
+color:gold;
+text-align:center;
+margin-bottom:10px;
+}
+.watched-movie-card{
+background:rgba(255,215,0,0.08);
+padding:20px;
+border-radius:12px;
+border-left:5px solid gold;
+}
+.watched-movie-card h3{
+color:white;
+font-size:24px;
+}
+.watched-movie-card p{
+color:#CBD5E1;
+font-size:16px;
+margin:5px 0;
+}
+
 .movies{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
@@ -265,7 +312,7 @@ margin:8px 0;
 display:flex;
 gap:2px;
 }
-.star{ font-size:16px; }
+.star{ font-size:18px; }
 .star.filled { color:#FBBF24; }
 .star.half   { color:#FBBF24; opacity:.6; }
 .star.empty  { color:#475569; }
@@ -301,12 +348,15 @@ border:1px solid rgba(255,215,0,0.2);
 }
 .recommendations-section h2{
 color:gold;
-margin-bottom:20px;
+margin-bottom:10px;
 font-size:26px;
 text-align:center;
 }
-.recommendations-section h2 span{
-font-size:20px;
+.recommendations-section .sub-text{
+text-align:center;
+color:#94A3B8;
+margin-bottom:20px;
+font-size:15px;
 }
 .recommendations-grid{
 display:grid;
@@ -382,67 +432,83 @@ font-size:18px;
   <!-- Navigation Bar -->
   <div class="navbar">
     <div class="nav-left">
-      <span class="nav-logo">🎬 MovieApp</span>
+      <span class="nav-logo">&#127908; MovieApp</span>
       <div class="nav-links">
-        <a href="dashboard.jsp"><button>🏠 Dashboard</button></a>
-        <a href="admin.jsp"><button>⚙️ Admin</button></a>
-        <a href="user.jsp"><button class="active">🎥 User Panel</button></a>
+        <a href="dashboard.jsp"><button>&#127968; Dashboard</button></a>
+        <a href="admin.jsp"><button>&#9881; Admin</button></a>
+        <a href="user.jsp"><button class="active">&#127916; User Panel</button></a>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:15px;">
-      <span class="nav-user">👤 <%= session.getAttribute("username") %></span>
-      <a href="logout.jsp"><button class="logout-btn">🚪 Logout</button></a>
+      <span class="nav-user">&#128100; <%= session.getAttribute("username") %></span>
+      <a href="logout.jsp"><button class="logout-btn">&#128682; Logout</button></a>
     </div>
   </div>
 
   <div class="header">
-    <h1>🎥 Movie Recommendation System</h1>
+    <h1>&#127916; Movie Recommendation System</h1>
     <p>Select a movie to watch and get recommendations</p>
   </div>
   
   <% if(!watchMessage.isEmpty()){ %>
-    <div class="watch-msg">✅ <%= watchMessage %></div>
+    <div class="watch-msg">&#9989; <%= watchMessage %></div>
+    
+    <!-- Show the watched movie at the top -->
+    <div class="watched-movie-section">
+      <h2>&#127775; You Watched</h2>
+      <div class="watched-movie-card">
+        <h3>&#127916; <%= watchedMovieName %></h3>
+        <p><b>Genre:</b> <%= watchedMovieGenre %></p>
+      </div>
+    </div>
   <% } %>
   
+  <h2 style="color:white;margin-bottom:20px;">All Movies</h2>
   <div class="movies">
   <%
-    if(rs != null && rs.next())
+    if(!allMovies.isEmpty())
     {
-        do {
-            double rating = rs.getDouble("rating");
-            int fullStars = (int) rating;
-            boolean hasHalf = (rating - fullStars) >= 0.4;
-            int emptyStars = 10 - fullStars - (hasHalf ? 1 : 0);
+        for(Map<String, Object> movie : allMovies)
+        {
+            String movieName = (String) movie.get("movie_name");
+            String genre = (String) movie.get("genre");
+            double rating = (Double) movie.get("rating");
+            
+            // Convert rating to 5-star scale (if rating is out of 10)
+            double starRating = rating / 2;
+            int fullStars = (int) starRating;
+            boolean hasHalf = (starRating - fullStars) >= 0.4;
+            int emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
   %>
     <div class="card">
-      <h2><%= rs.getString("movie_name") %></h2>
-      <p><b>Genre:</b> <%= rs.getString("genre") %></p>
+      <h2><%= movieName %></h2>
+      <p><b>Genre:</b> <%= genre %></p>
       <div class="stars-row">
         <div class="stars">
           <% for(int i=0;i<fullStars;i++){ %>
-            <span class="star filled">★</span>
+            <span class="star filled">&#9733;</span>
           <% } %>
           <% if(hasHalf){ %>
-            <span class="star half">★</span>
+            <span class="star half">&#9733;</span>
           <% } %>
           <% for(int i=0;i<emptyStars;i++){ %>
-            <span class="star empty">★</span>
+            <span class="star empty">&#9733;</span>
           <% } %>
         </div>
-        <span class="rating-num"><%= rating %>/10</span>
+        <span class="rating-num"><%= rating %>/10 (<%= String.format("%.1f", starRating) %>/5)</span>
       </div>
       <form method="post">
-        <input type="hidden" name="watchMovie" value="<%= rs.getString("movie_name") %>">
-        <button type="submit">▶ Watch Movie</button>
+        <input type="hidden" name="watchMovie" value="<%= movieName %>">
+        <button type="submit">&#9654; Watch Movie</button>
       </form>
     </div>
   <%
-        } while(rs.next());
+        }
     }
     else
     {
   %>
-    <div class="no-movies">🎬 No movies available. Please check back later.</div>
+    <div class="no-movies">&#127916; No movies available. Please check back later.</div>
   <%
     }
   %>
@@ -451,8 +517,8 @@ font-size:18px;
   <!-- Recommendations Section -->
   <% if(!recommendations.isEmpty()) { %>
     <div class="recommendations-section">
-      <h2>🎯 <span>Movies in Genre:</span> <%= watchedMovieGenre %></h2>
-      <p style="text-align:center;color:#94A3B8;margin-bottom:20px;">Top rated movies you might like!</p>
+      <h2>&#127775; Recommended Movies</h2>
+      <p class="sub-text">Top rated movies in the same genre: <b><%= watchedMovieGenre %></b></p>
       <div class="recommendations-grid">
       <%
         for(Map<String, Object> movie : recommendations) {
@@ -460,30 +526,32 @@ font-size:18px;
             String genre = (String) movie.get("genre");
             double rating = (Double) movie.get("rating");
             
-            int fullStars = (int) rating;
-            boolean hasHalf = (rating - fullStars) >= 0.4;
-            int emptyStars = 10 - fullStars - (hasHalf ? 1 : 0);
+            // Convert rating to 5-star scale
+            double starRating = rating / 2;
+            int fullStars = (int) starRating;
+            boolean hasHalf = (starRating - fullStars) >= 0.4;
+            int emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
       %>
         <div class="rec-card">
-          <h3>🎬 <%= movieName %></h3>
+          <h3>&#127916; <%= movieName %></h3>
           <p><b>Genre:</b> <%= genre %></p>
           <div class="stars-row">
             <div class="stars">
               <% for(int i=0;i<fullStars;i++){ %>
-                <span class="star filled">★</span>
+                <span class="star filled">&#9733;</span>
               <% } %>
               <% if(hasHalf){ %>
-                <span class="star half">★</span>
+                <span class="star half">&#9733;</span>
               <% } %>
               <% for(int i=0;i<emptyStars;i++){ %>
-                <span class="star empty">★</span>
+                <span class="star empty">&#9733;</span>
               <% } %>
             </div>
             <span class="rating-num"><%= rating %>/10</span>
           </div>
           <form method="post" style="margin-top:10px;">
             <input type="hidden" name="watchMovie" value="<%= movieName %>">
-            <button type="submit" style="padding:6px 15px;font-size:13px;">▶ Watch</button>
+            <button type="submit" style="padding:6px 15px;font-size:13px;">&#9654; Watch</button>
           </form>
         </div>
       <%
@@ -491,29 +559,31 @@ font-size:18px;
       %>
       </div>
     </div>
-  <% } else if(watchMessage != null && !watchMessage.isEmpty() && !recommendations.isEmpty()) { %>
+  <% } else if(!watchMessage.isEmpty() && recommendations.isEmpty()) { %>
     <div class="recommendations-section">
       <div class="no-recommendations">
-        😅 No other movies found in the genre "<%= watchedMovieGenre %>"
+        &#128533; No other movies found in the genre: "<%= watchedMovieGenre %>"
       </div>
     </div>
   <% } %>
 
   <div class="bottom">
-    <a href="dashboard.jsp"><button>🏠 Dashboard</button></a>
-    <a href="admin.jsp"><button>⚙️ Admin Panel</button></a>
-    <a href="logout.jsp"><button style="background:#DC2626;">🚪 Logout</button></a>
+    <a href="dashboard.jsp"><button>&#127968; Dashboard</button></a>
+    <a href="admin.jsp"><button>&#9881; Admin Panel</button></a>
+    <a href="logout.jsp"><button style="background:#DC2626;">&#128682; Logout</button></a>
   </div>
 </div>
 </body>
 </html>
 
 <%
-if(rs != null) rs.close();
-if(con != null) con.close();
 }
 catch(Exception e)
 {
     out.println("<h3 style='color:red;text-align:center;'>Error: " + e.getMessage() + "</h3>");
+}
+finally
+{
+    if(con != null) con.close();
 }
 %>

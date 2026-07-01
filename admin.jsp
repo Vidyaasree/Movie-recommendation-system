@@ -1,4 +1,5 @@
 <%@ page import="java.sql.*" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 
 <%
 if(session.getAttribute("login") == null)
@@ -398,7 +399,7 @@ transform:translateY(-2px);
   <!-- Navigation Bar -->
   <div class="navbar">
     <div class="nav-left">
-      <span class="nav-logo">🎬 MovieApp</span>
+      <span class="nav-logo"> MovieApp</span>
       <div class="nav-links">
         <a href="dashboard.jsp"><button>🏠 Dashboard</button></a>
         <a href="admin.jsp"><button class="active">⚙️ Admin</button></a>
