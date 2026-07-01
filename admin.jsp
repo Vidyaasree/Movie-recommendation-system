@@ -18,12 +18,12 @@ try
     Class.forName("com.mysql.cj.jdbc.Driver");
 
     // Database connection parameters - UPDATED FOR AIVEN
-     String dbHost = System.getenv("MYSQL_HOST");
-String dbPort = System.getenv("MYSQL_PORT");
-String dbName = System.getenv("MYSQL_DB");
-String dbUser = System.getenv("MYSQL_USER");
-String dbPass = System.getenv("MYSQL_PASSWORD");
-String dbUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + "?sslMode=REQUIRED&useSSL=true&serverTimezone=UTC";
+    String dbHost = System.getenv("MYSQL_HOST");
+    String dbPort = System.getenv("MYSQL_PORT");
+    String dbName = System.getenv("MYSQL_DB");
+    String dbUser = System.getenv("MYSQL_USER");
+    String dbPass = System.getenv("MYSQL_PASSWORD");
+    String dbUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + "?sslMode=REQUIRED&useSSL=true&serverTimezone=UTC";
     
     con = DriverManager.getConnection(dbUrl, dbUser, dbPass);
 
@@ -48,18 +48,26 @@ String dbUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + "?sslMod
                     ps.setString(1, movie.trim());
                     ps.setString(2, genre.trim());
                     ps.setDouble(3, ratingVal);
-                    ps.executeUpdate();
+                    int rowsAffected = ps.executeUpdate();
                     ps.close();
-                    message = "Movie Added Successfully!";
+                    
+                    if(rowsAffected > 0) {
+                        message = "Movie Added Successfully!";
+                    } else {
+                        message = "Failed to add movie. Please try again.";
+                    }
                 }
             } catch(NumberFormatException e) {
                 message = "Invalid rating format. Please enter a number.";
+            } catch(SQLException e) {
+                message = "Database error: " + e.getMessage();
             }
         } else {
             message = "All fields are required";
         }
     }
 
+    // Always fetch movies after any POST operation to show updated list
     st = con.createStatement();
     rs = st.executeQuery("SELECT * FROM movies ORDER BY rating DESC");
 %>
@@ -111,6 +119,79 @@ margin:auto;
 position:relative;
 z-index:10;
 }
+
+/* Navigation Bar Styles */
+.navbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:rgba(255,255,255,.08);
+backdrop-filter:blur(15px);
+padding:15px 30px;
+border-radius:15px;
+margin-bottom:35px;
+border:1px solid rgba(255,255,255,.12);
+}
+.nav-left{
+display:flex;
+align-items:center;
+gap:20px;
+}
+.nav-logo{
+color:white;
+font-size:22px;
+font-weight:bold;
+letter-spacing:1px;
+}
+.nav-links{
+display:flex;
+gap:15px;
+}
+.nav-links a{
+text-decoration:none;
+}
+.nav-links button{
+padding:10px 22px;
+background:transparent;
+border:1px solid rgba(255,255,255,.2);
+border-radius:10px;
+color:white;
+cursor:pointer;
+transition:.3s;
+font-size:14px;
+font-weight:500;
+}
+.nav-links button:hover{
+background:rgba(255,255,255,.1);
+transform:translateY(-2px);
+}
+.nav-links .active{
+background:#2563EB;
+border-color:#2563EB;
+}
+.nav-links .active:hover{
+background:#1D4ED8;
+}
+.nav-user{
+color:#94A3B8;
+font-size:14px;
+}
+.logout-btn{
+padding:10px 22px;
+background:#EF4444;
+border:none;
+border-radius:10px;
+color:white;
+cursor:pointer;
+transition:.3s;
+font-size:14px;
+font-weight:500;
+}
+.logout-btn:hover{
+background:#DC2626;
+transform:translateY(-2px);
+}
+
 .header{
 text-align:center;
 color:white;
@@ -313,10 +394,28 @@ transform:translateY(-2px);
 </head>
 <body>
 <div class="container">
+  
+  <!-- Navigation Bar -->
+  <div class="navbar">
+    <div class="nav-left">
+      <span class="nav-logo">🎬 MovieApp</span>
+      <div class="nav-links">
+        <a href="dashboard.jsp"><button>🏠 Dashboard</button></a>
+        <a href="admin.jsp"><button class="active">⚙️ Admin</button></a>
+        <a href="user.jsp"><button>🎥 User Panel</button></a>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:15px;">
+      <span class="nav-user">👤 <%= session.getAttribute("username") %></span>
+      <a href="logout.jsp"><button class="logout-btn">🚪 Logout</button></a>
+    </div>
+  </div>
+
   <div class="header">
     <h1>&#9881; Admin Panel</h1>
     <p>Manage Movie Collection</p>
   </div>
+  
   <div class="form-box">
     <h2>&#127916; Add New Movie</h2>
     <form method="post">
@@ -337,36 +436,40 @@ transform:translateY(-2px);
       <button type="submit" class="add-btn">&#43; Add Movie</button>
     </form>
     <% if(!message.equals("")){ 
-        boolean isError = message.contains("Invalid") || message.contains("required") || message.contains("between");
+        boolean isError = message.contains("Invalid") || message.contains("required") || message.contains("between") || message.contains("Failed") || message.contains("Database error");
     %>
       <p class="<%= isError ? "error-msg" : "success" %>"><%= message %></p>
     <% } %>
   </div>
+  
   <h2 class="section-title">&#127902; Movie Library</h2>
   <div class="movies-grid">
   <%
-    while(rs.next())
-    {
-        String mName   = rs.getString("movie_name");
-        String mGenre  = rs.getString("genre");
-        double mRating = rs.getDouble("rating");
+    if(rs != null) {
+        boolean hasMovies = false;
+        while(rs.next())
+        {
+            hasMovies = true;
+            String mName   = rs.getString("movie_name");
+            String mGenre  = rs.getString("genre");
+            double mRating = rs.getDouble("rating");
 
-        String emoji = "&#127916;";
-        String genreClass = "genre-default";
-        String genreLow = mGenre.toLowerCase();
+            String emoji = "&#127916;";
+            String genreClass = "genre-default";
+            String genreLow = mGenre.toLowerCase();
 
-        if(genreLow.contains("action"))         { emoji="&#128293;"; genreClass="genre-action"; }
-        else if(genreLow.contains("drama"))      { emoji="&#127914;"; genreClass="genre-drama"; }
-        else if(genreLow.contains("comedy"))     { emoji="&#128514;"; genreClass="genre-comedy"; }
-        else if(genreLow.contains("sci"))        { emoji="&#128640;"; genreClass="genre-scifi"; }
-        else if(genreLow.contains("horror"))     { emoji="&#128123;"; genreClass="genre-horror"; }
-        else if(genreLow.contains("romance"))    { emoji="&#10084;";  genreClass="genre-romance"; }
-        else if(genreLow.contains("thriller"))   { emoji="&#128269;"; genreClass="genre-thriller"; }
-        else if(genreLow.contains("animation"))  { emoji="&#127752;"; genreClass="genre-animation"; }
+            if(genreLow.contains("action"))         { emoji="&#128293;"; genreClass="genre-action"; }
+            else if(genreLow.contains("drama"))      { emoji="&#127914;"; genreClass="genre-drama"; }
+            else if(genreLow.contains("comedy"))     { emoji="&#128514;"; genreClass="genre-comedy"; }
+            else if(genreLow.contains("sci"))        { emoji="&#128640;"; genreClass="genre-scifi"; }
+            else if(genreLow.contains("horror"))     { emoji="&#128123;"; genreClass="genre-horror"; }
+            else if(genreLow.contains("romance"))    { emoji="&#10084;";  genreClass="genre-romance"; }
+            else if(genreLow.contains("thriller"))   { emoji="&#128269;"; genreClass="genre-thriller"; }
+            else if(genreLow.contains("animation"))  { emoji="&#127752;"; genreClass="genre-animation"; }
 
-        int fullStars  = (int) mRating;
-        boolean hasHalf = (mRating - fullStars) >= 0.4;
-        int emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+            int fullStars  = (int) mRating;
+            boolean hasHalf = (mRating - fullStars) >= 0.4;
+            int emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
   %>
     <div class="movie-card">
       <div class="poster <%= genreClass %>">
@@ -377,7 +480,7 @@ transform:translateY(-2px);
       </div>
       <div class="card-body">
         <h3 title="<%= mName %>"><%= mName %></h3>
-        <div class="genre-tag">ID: <%= rs.getInt("movie_id") %></div>
+        <div class="genre-tag">ID: <%= rs.getInt("id") %></div>
         <div class="stars-row">
           <div class="stars">
             <% for(int i=0;i<fullStars;i++){ %>
@@ -394,8 +497,19 @@ transform:translateY(-2px);
         </div>
       </div>
     </div>
-  <% } %>
+  <%
+        }
+        if(!hasMovies) {
+  %>
+    <div style="grid-column:1/-1;text-align:center;color:#94A3B8;padding:40px;font-size:18px;">
+      No movies available. Add your first movie above!
+    </div>
+  <%
+        }
+    }
+  %>
   </div>
+  
   <div class="bottom">
     <a href="dashboard.jsp"><button>&#127968; Dashboard</button></a>
     <a href="user.jsp"><button>&#127902; User Panel</button></a>
