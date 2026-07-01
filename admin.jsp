@@ -17,12 +17,13 @@ try
 {
     Class.forName("com.mysql.cj.jdbc.Driver");
 
-    String dbHost = "localhost";
-    String dbPort = "3306";
-    String dbName = "moviedb";
-    String dbUser = "root";
-    String dbPass = "";
-    String dbUrl  = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName;
+    // Database connection parameters - UPDATED FOR AIVEN
+     String dbHost = System.getenv("MYSQL_HOST");
+String dbPort = System.getenv("MYSQL_PORT");
+String dbName = System.getenv("MYSQL_DB");
+String dbUser = System.getenv("MYSQL_USER");
+String dbPass = System.getenv("MYSQL_PASSWORD");
+String dbUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + "?sslMode=REQUIRED&useSSL=true&serverTimezone=UTC";
     
     con = DriverManager.getConnection(dbUrl, dbUser, dbPass);
 
@@ -396,7 +397,7 @@ transform:translateY(-2px);
   <% } %>
   </div>
   <div class="bottom">
-    <a href="../dashboard.jsp"><button>&#127968; Dashboard</button></a>
+    <a href="dashboard.jsp"><button>&#127968; Dashboard</button></a>
     <a href="user.jsp"><button>&#127902; User Panel</button></a>
     <a href="logout.jsp"><button style="background:#DC2626;">&#128682; Logout</button></a>
   </div>

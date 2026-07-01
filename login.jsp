@@ -18,18 +18,17 @@ if(request.getMethod().equalsIgnoreCase("POST"))
         // Load MySQL Driver
         Class.forName("com.mysql.cj.jdbc.Driver");
 
-        // Database connection parameters
-        String dbHost = "localhost";
-        String dbPort = "3306";
-        String dbName = "moviedb";  // Your database name
-        String dbUser = "root";
-        String dbPass = "";  // Your MySQL password (leave empty if no password)
-        String dbUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName;
-        
+        // Database connection parameters - UPDATED FOR AIVEN
+       String dbHost = System.getenv("MYSQL_HOST");
+String dbPort = System.getenv("MYSQL_PORT");
+String dbName = System.getenv("MYSQL_DB");
+String dbUser = System.getenv("MYSQL_USER");
+String dbPass = System.getenv("MYSQL_PASSWORD");
+String dbUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + "?sslMode=REQUIRED&useSSL=true&serverTimezone=UTC";
         // Establish connection
         con = DriverManager.getConnection(dbUrl, dbUser, dbPass);
 
-        // Query to check user credentials
+        // Query to check user credentials - UNCHANGED
         String sql = "SELECT * FROM users WHERE username=? AND password=?";
         ps = con.prepareStatement(sql);
         ps.setString(1, username);
@@ -39,7 +38,7 @@ if(request.getMethod().equalsIgnoreCase("POST"))
 
         if(rs.next())
         {
-            // Login successful
+            // Login successful - UNCHANGED
             session.setAttribute("login", "yes");
             session.setAttribute("username", username);
             response.sendRedirect("dashboard.jsp");  // Go to dashboard
@@ -57,7 +56,7 @@ if(request.getMethod().equalsIgnoreCase("POST"))
     }
     finally
     {
-        // Close resources
+        // Close resources - UNCHANGED
         try {
             if(rs != null) rs.close();
             if(ps != null) ps.close();
@@ -200,28 +199,32 @@ text-align:center;
 font-size:13px;
 color:#94A3B8;
 }
+.footer a{
+color:#38BDF8;
+text-decoration:none;
+}
 </style>
 </head>
 <body>
 <div class="card">
-<div class="logo">MOVIE RECOMMENDATION</div>
-<p class="subtitle">Sign in to continue</p>
-<form method="post">
+<div class="logo">🎬 Movie Recommendation</div>
+<div class="subtitle">Sign in to continue</div>
+
+<form method="post" action="login.jsp">
 <label>Username</label>
-<input type="text" name="username" placeholder="Enter Username" required>
+<input type="text" name="username" placeholder="Enter your username" required>
+
 <label>Password</label>
-<input type="password" name="password" placeholder="Enter Password" required>
-<button type="submit">LOGIN</button>
+<input type="password" name="password" placeholder="Enter your password" required>
+
+<button type="submit">Login</button>
+
+<% if(!error.isEmpty()) { %>
+<div class="error"><%= error %></div>
+<% } %>
 </form>
-<%
-if(!error.equals(""))
-{
-%>
-<div class="error"><%=error%></div>
-<%
-}
-%>
-<div class="footer">Powered by JSP | JDBC | MySQL</div>
+
+<div class="footer">Don't have an account? <a href="register.jsp">Sign up</a></div>
 </div>
 </body>
 </html>
