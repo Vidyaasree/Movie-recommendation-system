@@ -13,6 +13,18 @@ String username = (String)session.getAttribute("username");
 <meta charset="UTF-8">
 <title>Dashboard</title>
 <style>
+:root{
+  --bg:#0b0b0d;
+  --panel:#17171b;
+  --panel-2:#1e1e23;
+  --border:#2b2b31;
+  --text:#e8e8ea;
+  --muted:#9a9aa5;
+  --accent:#5865f2;
+  --accent-hover:#4752c4;
+  --danger:#e5484d;
+  --danger-hover:#c53438;
+}
 *{
 margin:0;
 padding:0;
@@ -20,52 +32,26 @@ box-sizing:border-box;
 font-family:'Segoe UI',sans-serif;
 }
 body{
-background:linear-gradient(135deg,#0F172A,#1E293B,#0B1120);
+background:var(--bg);
 min-height:100vh;
-overflow-x:hidden;
-}
-body::before{
-content:"";
-position:fixed;
-width:350px;
-height:350px;
-background:#2563EB;
-border-radius:50%;
-top:-120px;
-left:-120px;
-filter:blur(100px);
-opacity:.35;
-}
-body::after{
-content:"";
-position:fixed;
-width:320px;
-height:320px;
-background:#06B6D4;
-border-radius:50%;
-bottom:-120px;
-right:-120px;
-filter:blur(100px);
-opacity:.30;
 }
 .navbar{
 width:100%;
 padding:22px 60px;
-background:rgba(255,255,255,.08);
-backdrop-filter:blur(15px);
+background:var(--panel);
 display:flex;
 justify-content:space-between;
 align-items:center;
-border-bottom:1px solid rgba(255,255,255,.12);
+border-bottom:1px solid var(--border);
 }
 .logo{
-font-size:28px;
+font-size:26px;
 font-weight:bold;
-color:white;
-letter-spacing:2px;
+color:var(--text);
+letter-spacing:1px;
 }
 .user-info{
-color:#94A3B8;
+color:var(--muted);
 font-size:14px;
 display:flex;
 align-items:center;
@@ -76,86 +62,86 @@ text-decoration:none;
 }
 .logout button{
 padding:10px 25px;
-background:#EF4444;
+background:var(--danger);
 border:none;
-border-radius:10px;
+border-radius:8px;
 color:white;
-font-size:15px;
+font-size:14px;
 cursor:pointer;
-transition:.3s;
+transition:.2s;
 }
 .logout button:hover{
-background:#DC2626;
-transform:translateY(-2px);
+background:var(--danger-hover);
 }
 .container{
 width:90%;
+max-width:1100px;
 margin:auto;
 padding:60px 0;
 }
 .title{
 text-align:center;
-color:white;
-font-size:38px;
-margin-bottom:15px;
+color:var(--text);
+font-size:34px;
+margin-bottom:12px;
 }
 .subtitle{
 text-align:center;
-color:#CBD5E1;
-margin-bottom:60px;
-font-size:18px;
+color:var(--muted);
+margin-bottom:55px;
+font-size:16px;
 }
 .cards{
 display:flex;
 justify-content:center;
-gap:50px;
+gap:40px;
 flex-wrap:wrap;
 }
 .card{
-width:360px;
-padding:40px;
-background:rgba(255,255,255,.08);
-backdrop-filter:blur(15px);
-border-radius:22px;
-border:1px solid rgba(255,255,255,.12);
-box-shadow:0 20px 40px rgba(0,0,0,.35);
-transition:.35s;
+width:340px;
+padding:36px;
+background:var(--panel);
+border:1px solid var(--border);
+border-radius:14px;
+transition:.2s;
 text-align:center;
 }
 .card:hover{
-transform:translateY(-10px);
-box-shadow:0 25px 50px rgba(37,99,235,.35);
+border-color:var(--accent);
+transform:translateY(-4px);
 }
 .card h2{
-color:white;
-margin-bottom:20px;
-font-size:28px;
+color:var(--text);
+margin-bottom:16px;
+font-size:24px;
 }
 .card p{
-color:#CBD5E1;
-line-height:28px;
-margin-bottom:35px;
-font-size:16px;
+color:var(--muted);
+line-height:26px;
+margin-bottom:28px;
+font-size:15px;
 }
 .card button{
-padding:14px 35px;
-background:#2563EB;
+padding:13px 32px;
+background:var(--accent);
 color:white;
 border:none;
-border-radius:10px;
-font-size:16px;
+border-radius:8px;
+font-size:15px;
 cursor:pointer;
-transition:.3s;
+transition:.2s;
 }
 .card button:hover{
-background:#1D4ED8;
-transform:scale(1.05);
+background:var(--accent-hover);
+}
+.card a{
+text-decoration:none;
 }
 .footer{
 text-align:center;
-margin-top:70px;
-color:#94A3B8;
-font-size:14px;
+margin-top:65px;
+color:var(--muted);
+font-size:13px;
 }
 </style>
 </head>
@@ -174,14 +160,14 @@ font-size:14px;
 <p class="subtitle">Choose an option to continue</p>
 <div class="cards">
 <div class="card">
-<h2> Admin Panel</h2>
+<h2>Admin Panel</h2>
 <p>Manage your movie collection by adding new movies with genres and ratings. View all available movies stored in the database.</p>
 <a href="admin.jsp">
 <button>Open Admin Panel</button>
 </a>
 </div>
 <div class="card">
-<h2> User Panel</h2>
+<h2>User Panel</h2>
 <p>Browse available movies, watch your favourites and receive intelligent recommendations based on your viewing history.</p>
 <a href="user.jsp">
 <button>Open User Panel</button>

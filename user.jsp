@@ -9,14 +9,9 @@ if(session.getAttribute("login") == null)
     return;
 }
 
-String watchMessage = "";
-List<Map<String, Object>> recommendations = new ArrayList<>();
-String watchedMovieGenre = "";
-String watchedMovieName = "";
 List<Map<String, Object>> allMovies = new ArrayList<>();
 
 Connection con = null;
-PreparedStatement ps = null;
 Statement st = null;
 ResultSet rs = null;
 
@@ -24,75 +19,18 @@ try
 {
     Class.forName("com.mysql.cj.jdbc.Driver");
 
-    // Database connection parameters - UPDATED FOR AIVEN
     String dbHost = System.getenv("MYSQL_HOST");
     String dbPort = System.getenv("MYSQL_PORT");
     String dbName = System.getenv("MYSQL_DB");
     String dbUser = System.getenv("MYSQL_USER");
     String dbPass = System.getenv("MYSQL_PASSWORD");
     String dbUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + "?sslMode=REQUIRED&useSSL=true&serverTimezone=UTC";
-    
+
     con = DriverManager.getConnection(dbUrl, dbUser, dbPass);
 
-    String watchMovie = request.getParameter("watchMovie");
-
-    if(watchMovie != null && !watchMovie.trim().isEmpty())
-    {
-        watchedMovieName = watchMovie.trim();
-        String username = (String)session.getAttribute("username");
-        
-        ps = con.prepareStatement(
-            "INSERT INTO watch_history(username, movie_name, watched_time) VALUES(?, ?, NOW())"
-        );
-        ps.setString(1, username != null ? username : "anonymous");
-        ps.setString(2, watchedMovieName);
-        ps.executeUpdate();
-        ps.close();
-        
-        watchMessage = "You watched: " + watchedMovieName;
-
-        // Get the genre of the watched movie
-        ps = con.prepareStatement(
-            "SELECT genre FROM movies WHERE movie_name=?"
-        );
-        ps.setString(1, watchedMovieName);
-        ResultSet r1 = ps.executeQuery();
-
-        if(r1.next())
-        {
-            watchedMovieGenre = r1.getString("genre");
-        }
-        r1.close();
-        ps.close();
-
-        // Get ALL movies of the same genre (excluding the watched one), sorted by rating DESC
-        if(watchedMovieGenre != null && !watchedMovieGenre.isEmpty())
-        {
-            ps = con.prepareStatement(
-                "SELECT * FROM movies WHERE genre=? AND movie_name<>? ORDER BY rating DESC"
-            );
-            ps.setString(1, watchedMovieGenre);
-            ps.setString(2, watchedMovieName);
-            ResultSet r2 = ps.executeQuery();
-
-            while(r2.next())
-            {
-                Map<String, Object> movie = new HashMap<>();
-                movie.put("movie_name", r2.getString("movie_name"));
-                movie.put("genre", r2.getString("genre"));
-                movie.put("rating", r2.getDouble("rating"));
-                recommendations.add(movie);
-            }
-            r2.close();
-            ps.close();
-        }
-    }
-
-    // Fetch all movies
     st = con.createStatement();
     rs = st.executeQuery("SELECT * FROM movies ORDER BY movie_name");
-    
-    // Store all movies in a list
+
     while(rs.next())
     {
         Map<String, Object> movie = new HashMap<>();
@@ -101,8 +39,6 @@ try
         movie.put("rating", rs.getDouble("rating"));
         allMovies.add(movie);
     }
-    rs.close();
-    st.close();
 %>
 
 <!DOCTYPE html>
@@ -111,6 +47,19 @@ try
 <meta charset="UTF-8">
 <title>User Panel</title>
 <style>
+:root{
+  --bg:#0b0b0d;
+  --panel:#17171b;
+  --panel-2:#1e1e23;
+  --border:#2b2b31;
+  --text:#e8e8ea;
+  --muted:#9a9aa5;
+  --accent:#5865f2;
+  --accent-hover:#4752c4;
+  --danger:#e5484d;
+  --danger-hover:#c53438;
+  --gold:#f5c542;
+}
 *{
 margin:0;
 padding:0;
@@ -118,54 +67,24 @@ box-sizing:border-box;
 font-family:'Segoe UI',sans-serif;
 }
 body{
-background:linear-gradient(135deg,#0F172A,#1E293B,#0B1120);
+background:var(--bg);
 min-height:100vh;
 padding:40px;
-position:relative;
-overflow-x:hidden;
-}
-body::before{
-content:"";
-position:fixed;
-width:300px;
-height:300px;
-background:#2563EB;
-border-radius:50%;
-top:-100px;
-left:-100px;
-filter:blur(100px);
-opacity:.35;
-}
-body::after{
-content:"";
-position:fixed;
-width:300px;
-height:300px;
-background:#06B6D4;
-border-radius:50%;
-bottom:-100px;
-right:-100px;
-filter:blur(100px);
-opacity:.30;
 }
 .container{
 width:90%;
+max-width:1200px;
 margin:auto;
-position:relative;
-z-index:10;
 }
-
-/* Navigation Bar Styles */
 .navbar{
 display:flex;
 justify-content:space-between;
 align-items:center;
-background:rgba(255,255,255,.08);
-backdrop-filter:blur(15px);
+background:var(--panel);
 padding:15px 30px;
-border-radius:15px;
+border-radius:12px;
 margin-bottom:35px;
-border:1px solid rgba(255,255,255,.12);
+border:1px solid var(--border);
 }
 .nav-left{
 display:flex;
@@ -173,232 +92,153 @@ align-items:center;
 gap:20px;
 }
 .nav-logo{
-color:white;
-font-size:22px;
+color:var(--text);
+font-size:20px;
 font-weight:bold;
 letter-spacing:1px;
 }
 .nav-links{
 display:flex;
-gap:15px;
+gap:12px;
 }
 .nav-links a{
 text-decoration:none;
 }
 .nav-links button{
-padding:10px 22px;
+padding:10px 20px;
 background:transparent;
-border:1px solid rgba(255,255,255,.2);
-border-radius:10px;
-color:white;
+border:1px solid var(--border);
+border-radius:8px;
+color:var(--text);
 cursor:pointer;
-transition:.3s;
+transition:.2s;
 font-size:14px;
 font-weight:500;
 }
 .nav-links button:hover{
-background:rgba(255,255,255,.1);
-transform:translateY(-2px);
+border-color:var(--accent);
 }
 .nav-links .active{
-background:#2563EB;
-border-color:#2563EB;
+background:var(--accent);
+border-color:var(--accent);
 }
 .nav-links .active:hover{
-background:#1D4ED8;
+background:var(--accent-hover);
 }
 .nav-user{
-color:#94A3B8;
+color:var(--muted);
 font-size:14px;
 }
 .logout-btn{
-padding:10px 22px;
-background:#EF4444;
+padding:10px 20px;
+background:var(--danger);
 border:none;
-border-radius:10px;
+border-radius:8px;
 color:white;
 cursor:pointer;
-transition:.3s;
+transition:.2s;
 font-size:14px;
 font-weight:500;
 }
 .logout-btn:hover{
-background:#DC2626;
-transform:translateY(-2px);
+background:var(--danger-hover);
 }
-
 .header{
 text-align:center;
-color:white;
+color:var(--text);
 margin-bottom:35px;
 }
 .header h1{
-font-size:38px;
-margin-bottom:10px;
+font-size:32px;
+margin-bottom:8px;
 }
 .header p{
-color:#CBD5E1;
+color:var(--muted);
 }
-.watch-msg{
-text-align:center;
-color:#4ADE80;
-margin-bottom:20px;
-font-weight:bold;
-font-size:18px;
+.table-wrap{
+background:var(--panel);
+border:1px solid var(--border);
+border-radius:14px;
+overflow:hidden;
+margin-bottom:40px;
 }
-
-/* Watched Movie Highlight */
-.watched-movie-section{
-background:rgba(255, 215, 0, 0.1);
-border:2px solid rgba(255, 215, 0, 0.3);
-border-radius:15px;
-padding:20px;
-margin-bottom:30px;
+table{
+width:100%;
+border-collapse:collapse;
 }
-.watched-movie-section h2{
-color:gold;
-text-align:center;
-margin-bottom:10px;
+thead th{
+text-align:left;
+padding:16px 20px;
+background:var(--panel-2);
+color:var(--muted);
+font-size:13px;
+text-transform:uppercase;
+letter-spacing:.5px;
+border-bottom:1px solid var(--border);
 }
-.watched-movie-card{
-background:rgba(255,215,0,0.08);
-padding:20px;
-border-radius:12px;
-border-left:5px solid gold;
+tbody td{
+padding:16px 20px;
+color:var(--text);
+font-size:15px;
+border-bottom:1px solid var(--border);
+vertical-align:middle;
 }
-.watched-movie-card h3{
-color:white;
-font-size:24px;
+tbody tr:last-child td{
+border-bottom:none;
 }
-.watched-movie-card p{
-color:#CBD5E1;
-font-size:16px;
-margin:5px 0;
+tbody tr:hover{
+background:var(--panel-2);
 }
-
-.movies{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-gap:20px;
-}
-.card{
-background:rgba(255,255,255,.08);
-backdrop-filter:blur(15px);
-padding:20px;
-border-radius:15px;
-box-shadow:0 10px 25px rgba(0,0,0,.4);
-color:white;
-transition:.3s;
-}
-.card:hover{
-transform:translateY(-5px);
-}
-.card h2{
-color:#38BDF8;
-margin-bottom:10px;
-font-size:20px;
-}
-.card p{
-margin:8px 0;
-color:#E2E8F0;
+.genre-tag{
+display:inline-block;
+padding:4px 12px;
+border-radius:20px;
+font-size:12px;
+font-weight:600;
+background:var(--panel-2);
+color:var(--muted);
+border:1px solid var(--border);
 }
 .stars-row{
 display:flex;
 align-items:center;
 gap:8px;
-margin:8px 0;
 }
 .stars{
 display:flex;
 gap:2px;
 }
-.star{ font-size:18px; }
-.star.filled { color:#FBBF24; }
-.star.half   { color:#FBBF24; opacity:.6; }
-.star.empty  { color:#475569; }
+.star{ font-size:15px; }
+.star.filled { color:var(--gold); }
+.star.half   { color:var(--gold); opacity:.6; }
+.star.empty  { color:#3a3a40; }
 .rating-num{
-font-size:14px;
-color:#94A3B8;
+font-size:13px;
+color:var(--muted);
 }
-button{
-padding:10px 20px;
-background:#2563EB;
+.watch-btn{
+padding:9px 18px;
+background:var(--accent);
 color:white;
 border:none;
 border-radius:8px;
 cursor:pointer;
-transition:.3s;
-margin-top:10px;
-font-size:14px;
-font-weight:500;
-}
-button:hover{
-background:#1D4ED8;
-transform:translateY(-2px);
-}
-
-/* Recommendations Section */
-.recommendations-section{
-margin-top:40px;
-background:rgba(255, 248, 220, 0.08);
-backdrop-filter:blur(10px);
-padding:25px;
-border-radius:15px;
-border:1px solid rgba(255,215,0,0.2);
-}
-.recommendations-section h2{
-color:gold;
-margin-bottom:10px;
-font-size:26px;
-text-align:center;
-}
-.recommendations-section .sub-text{
-text-align:center;
-color:#94A3B8;
-margin-bottom:20px;
-font-size:15px;
-}
-.recommendations-grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:20px;
-}
-.rec-card{
-background:rgba(255,255,255,.1);
-padding:18px;
-border-radius:12px;
-border-left:4px solid gold;
-transition:.3s;
-}
-.rec-card:hover{
-transform:translateY(-3px);
-background:rgba(255,255,255,.15);
-}
-.rec-card h3{
-color:white;
-font-size:17px;
-margin-bottom:6px;
-}
-.rec-card p{
-color:#CBD5E1;
-font-size:14px;
-margin:4px 0;
-}
-.rec-card .stars-row{
-margin:4px 0;
-}
-.rec-card .rating-num{
 font-size:13px;
+font-weight:600;
+transition:.2s;
 }
-.no-recommendations{
+.watch-btn:hover{
+background:var(--accent-hover);
+}
+.empty-row td{
 text-align:center;
-color:#94A3B8;
-padding:20px;
+color:var(--muted);
+padding:40px;
 font-size:16px;
 }
 .bottom{
 text-align:center;
-margin-top:30px;
+margin-top:20px;
 }
 .bottom a{
 text-decoration:none;
@@ -406,184 +246,125 @@ margin:10px;
 }
 .bottom button{
 padding:13px 28px;
-background:#2563EB;
+background:var(--accent);
 color:white;
 border:none;
-border-radius:10px;
+border-radius:8px;
 cursor:pointer;
 font-size:15px;
-transition:.3s;
+transition:.2s;
 }
 .bottom button:hover{
-background:#1D4ED8;
-transform:translateY(-2px);
-}
-.no-movies{
-text-align:center;
-color:#94A3B8;
-padding:40px;
-font-size:18px;
+background:var(--accent-hover);
 }
 </style>
 </head>
 <body>
 <div class="container">
-  
-  <!-- Navigation Bar -->
+
   <div class="navbar">
     <div class="nav-left">
-      <span class="nav-logo">&#127908; MovieApp</span>
+      <span class="nav-logo">MovieApp</span>
       <div class="nav-links">
-        <a href="dashboard.jsp"><button>&#127968; Dashboard</button></a>
-        <a href="admin.jsp"><button>&#9881; Admin</button></a>
-        <a href="user.jsp"><button class="active">&#127916; User Panel</button></a>
+        <a href="dashboard.jsp"><button>Dashboard</button></a>
+        <a href="admin.jsp"><button>Admin</button></a>
+        <a href="user.jsp"><button class="active">User Panel</button></a>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:15px;">
-      <span class="nav-user">&#128100; <%= session.getAttribute("username") %></span>
-      <a href="logout.jsp"><button class="logout-btn">&#128682; Logout</button></a>
+      <span class="nav-user"><%= session.getAttribute("username") %></span>
+      <a href="logout.jsp"><button class="logout-btn">Logout</button></a>
     </div>
   </div>
 
   <div class="header">
-    <h1>&#127916; Movie Recommendation System</h1>
-    <p>Select a movie to watch and get recommendations</p>
-  </div>
-  
-  <% if(!watchMessage.isEmpty()){ %>
-    <div class="watch-msg">&#9989; <%= watchMessage %></div>
-    
-    <!-- Show the watched movie at the top -->
-    <div class="watched-movie-section">
-      <h2>&#127775; You Watched</h2>
-      <div class="watched-movie-card">
-        <h3>&#127916; <%= watchedMovieName %></h3>
-        <p><b>Genre:</b> <%= watchedMovieGenre %></p>
-      </div>
-    </div>
-  <% } %>
-  
-  <h2 style="color:white;margin-bottom:20px;">All Movies</h2>
-  <div class="movies">
-  <%
-    if(!allMovies.isEmpty())
-    {
-        for(Map<String, Object> movie : allMovies)
-        {
-            String movieName = (String) movie.get("movie_name");
-            String genre = (String) movie.get("genre");
-            double rating = (Double) movie.get("rating");
-            
-            // Convert rating to 5-star scale (if rating is out of 10)
-            double starRating = rating / 2;
-            int fullStars = (int) starRating;
-            boolean hasHalf = (starRating - fullStars) >= 0.4;
-            int emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
-  %>
-    <div class="card">
-      <h2><%= movieName %></h2>
-      <p><b>Genre:</b> <%= genre %></p>
-      <div class="stars-row">
-        <div class="stars">
-          <% for(int i=0;i<fullStars;i++){ %>
-            <span class="star filled">&#9733;</span>
-          <% } %>
-          <% if(hasHalf){ %>
-            <span class="star half">&#9733;</span>
-          <% } %>
-          <% for(int i=0;i<emptyStars;i++){ %>
-            <span class="star empty">&#9733;</span>
-          <% } %>
-        </div>
-        <span class="rating-num"><%= rating %>/10 (<%= String.format("%.1f", starRating) %>/5)</span>
-      </div>
-      <form method="post">
-        <input type="hidden" name="watchMovie" value="<%= movieName %>">
-        <button type="submit">&#9654; Watch Movie</button>
-      </form>
-    </div>
-  <%
-        }
-    }
-    else
-    {
-  %>
-    <div class="no-movies">&#127916; No movies available. Please check back later.</div>
-  <%
-    }
-  %>
+    <h1>Movie Recommendation System</h1>
+    <p>Select a movie to watch and get a recommendation in the same genre</p>
   </div>
 
-  <!-- Recommendations Section -->
-  <% if(!recommendations.isEmpty()) { %>
-    <div class="recommendations-section">
-      <h2>&#127775; Recommended Movies</h2>
-      <p class="sub-text">Top rated movies in the same genre: <b><%= watchedMovieGenre %></b></p>
-      <div class="recommendations-grid">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Movie Name</th>
+          <th>Genre</th>
+          <th>Rating</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
       <%
-        for(Map<String, Object> movie : recommendations) {
-            String movieName = (String) movie.get("movie_name");
-            String genre = (String) movie.get("genre");
-            double rating = (Double) movie.get("rating");
-            
-            // Convert rating to 5-star scale
-            double starRating = rating / 2;
-            int fullStars = (int) starRating;
-            boolean hasHalf = (starRating - fullStars) >= 0.4;
-            int emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+        if(!allMovies.isEmpty())
+        {
+            for(Map<String, Object> movie : allMovies)
+            {
+                String movieName = (String) movie.get("movie_name");
+                String genre = (String) movie.get("genre");
+                double rating = (Double) movie.get("rating");
+
+                int fullStars = (int) rating;
+                boolean hasHalf = (rating - fullStars) >= 0.4;
+                int emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
       %>
-        <div class="rec-card">
-          <h3>&#127916; <%= movieName %></h3>
-          <p><b>Genre:</b> <%= genre %></p>
-          <div class="stars-row">
-            <div class="stars">
-              <% for(int i=0;i<fullStars;i++){ %>
-                <span class="star filled">&#9733;</span>
-              <% } %>
-              <% if(hasHalf){ %>
-                <span class="star half">&#9733;</span>
-              <% } %>
-              <% for(int i=0;i<emptyStars;i++){ %>
-                <span class="star empty">&#9733;</span>
-              <% } %>
+        <tr>
+          <td><%= movieName %></td>
+          <td><span class="genre-tag"><%= genre %></span></td>
+          <td>
+            <div class="stars-row">
+              <div class="stars">
+                <% for(int i=0;i<fullStars;i++){ %>
+                  <span class="star filled">&#9733;</span>
+                <% } %>
+                <% if(hasHalf){ %>
+                  <span class="star half">&#9733;</span>
+                <% } %>
+                <% for(int i=0;i<emptyStars;i++){ %>
+                  <span class="star empty">&#9733;</span>
+                <% } %>
+              </div>
+              <span class="rating-num"><%= rating %>/5</span>
             </div>
-            <span class="rating-num"><%= rating %>/10</span>
-          </div>
-          <form method="post" style="margin-top:10px;">
-            <input type="hidden" name="watchMovie" value="<%= movieName %>">
-            <button type="submit" style="padding:6px 15px;font-size:13px;">&#9654; Watch</button>
-          </form>
-        </div>
+          </td>
+          <td>
+            <form method="post" action="recommend.jsp">
+              <input type="hidden" name="watchMovie" value="<%= movieName %>">
+              <button type="submit" class="watch-btn">Watch Movie</button>
+            </form>
+          </td>
+        </tr>
+      <%
+            }
+        }
+        else
+        {
+      %>
+        <tr class="empty-row"><td colspan="4">No movies available. Please check back later.</td></tr>
       <%
         }
       %>
-      </div>
-    </div>
-  <% } else if(!watchMessage.isEmpty() && recommendations.isEmpty()) { %>
-    <div class="recommendations-section">
-      <div class="no-recommendations">
-        &#128533; No other movies found in the genre: "<%= watchedMovieGenre %>"
-      </div>
-    </div>
-  <% } %>
+      </tbody>
+    </table>
+  </div>
 
   <div class="bottom">
-    <a href="dashboard.jsp"><button>&#127968; Dashboard</button></a>
-    <a href="admin.jsp"><button>&#9881; Admin Panel</button></a>
-    <a href="logout.jsp"><button style="background:#DC2626;">&#128682; Logout</button></a>
+    <a href="dashboard.jsp"><button>Dashboard</button></a>
+    <a href="admin.jsp"><button>Admin Panel</button></a>
+    <a href="logout.jsp"><button style="background:var(--danger);">Logout</button></a>
   </div>
 </div>
 </body>
 </html>
 
 <%
+    if(rs != null) rs.close();
+    if(st != null) st.close();
 }
 catch(Exception e)
 {
-    out.println("<h3 style='color:red;text-align:center;'>Error: " + e.getMessage() + "</h3>");
+    out.println("<h3 style='color:#e5484d;text-align:center;'>Error: " + e.getMessage() + "</h3>");
 }
 finally
 {
-    if(con != null) con.close();
+    try { if(con != null) con.close(); } catch(Exception e) {}
 }
 %>
